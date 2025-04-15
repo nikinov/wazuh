@@ -1,0 +1,36 @@
+name: 'Test upgrade Wazuh agent package'
+description: 'Test upgrade Wazuh agent package'
+
+inputs:
+  old_package_url:
+    description: 'Package url to update from'
+    required: true
+  expected_upgrade_version:
+    description: 'Expected package version after upgrading'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run the Wazuh agent package test upgrade
+      run: |
+
+          if [ "${{ inputs.architecture}}" == "arm64" ]; then
+            # ${{ env.SCP_COMMAND_ARM64 }} ${{ env.ansible_user_arm64 }}@${{ env.ansible_host_arm64 }}:"/tmp/installer.log" /tmp/
+            ${{ env.SCP_COMMAND_ARM64 }} $GITHUB_WORKSPACE/.github/actions/4_builderpackage_macos-smoke-upgrade-test/smoke_upgrade_test.sh ${{ env.ansible_user_arm64 }}@${{ env.ansible_host_arm64 }}:
+            ${{ env.SSH_COMMAND_ARM64 }} sudo bash smoke_upgrade_test.sh ${{ inputs.old_package_url }} ${{ inputs.expected_upgrade_version }} "wazuh/packages/macos/output/*agent*"
+            ${{ env.SCP_COMMAND_ARM64 }} ${{ env.ansible_user_arm64 }}@${{ env.ansible_host_arm64 }}:"/tmp/installer.log" /tmp/
+          else
+            ${{ env.SCP_COMMAND_INTEL64 }} $GITHUB_WORKSPACE/.github/actions/4_builderpackage_macos-smoke-upgrade-test/smoke_upgrade_test.sh ${{ env.ansible_user_arm64 }}@${{ env.ansible_host_arm64 }}:
+            ${{ env.SSH_COMMAND_INTEL64 }} sudo bash smoke_upgrade_test.sh ${{ inputs.old_package_url }} ${{ inputs.expected_upgrade_version }} "wazuh/packages/macos/output/*agent*"
+            ${{ env.SCP_COMMAND_INTEL64 }} ${{ env.ansible_user_intel64 }}@${{ env.ansible_host_intel64 }}:"/tmp/installer.log" /tmp/
+          fi
+          cat /tmp/installer.log
+          if grep -q "The install was successful" "/tmp/installer.log"; then
+            echo "Installation successfully."
+          else
+            echo "The installation could not be completed. The package will not be uploaded.";
+            exit 1;
+          fi
+          sudo rm /tmp/upgraded_version.log
+   
