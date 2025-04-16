@@ -9,7 +9,7 @@ else
     exit 1
 fi
 GITHUB_REPOSITORY="wazuh/wazuh"
-GITHUB_OWNER="wazuh"
+GITHUB_OWNER="nikinov"
 IMAGE_ID_CACHE=ghcr.io/${GITHUB_OWNER}/${DOCKER_IMAGE_NAME}:latest
 IMAGE_ID_CACHE=$(echo ${IMAGE_ID_CACHE} | tr '[A-Z]' '[a-z]')
 IMAGE_ID=ghcr.io/${GITHUB_OWNER}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}

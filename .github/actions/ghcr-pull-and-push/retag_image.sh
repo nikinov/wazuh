@@ -33,7 +33,7 @@ retag_image(){
     OLD_TAG="$2"
     NEW_TAG="$3"
     GITHUB_REPOSITORY="wazuh/wazuh"
-    GITHUB_OWNER="wazuh"
+    GITHUB_OWNER="nikinov"
     IMAGE_ID=$(echo "ghcr.io/${GITHUB_OWNER}/${DOCKER_IMAGE_NAME}" | tr '[A-Z]' '[a-z]')
 
     # Bring old tag
