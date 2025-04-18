@@ -3,13 +3,6 @@ name: Build Wazuh manager
 
 on:
   push:
-    branches:
-      - main
-      - 'v*'
-      - buildbranch3
-    paths:
-      - 'src/**'
-      - 'packages/**'
   workflow_dispatch:
     inputs:
       docker_image_tag:
