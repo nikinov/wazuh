@@ -136,12 +136,9 @@ jobs:
           echo "DEBUG=${{ github.event_name == 'push' && env.INPUT_DEBUG || inputs.debug }}" >> $GITHUB_ENV
           echo "CHECKSUM=${{ github.event_name == 'push' && env.INPUT_CHECKSUM || inputs.checksum }}" >> $GITHUB_ENV
 
-      - name: Build Docker image locally
-        working-directory: packages
+      - name: Download docker image for package building
         run: |
-          echo "Building Docker image locally instead of pulling from registry"
-          # Build image for selected system
-          docker build -t $CONTAINER_NAME:${{ env.TAG }} -f builder_${{ env.SYSTEM }}/Dockerfile builder_${{ env.SYSTEM }}
+          bash $GITHUB_WORKSPACE/.github/actions/ghcr-pull-and-push/pull_image_from_ghcr.sh ${{ secrets.GITHUB_TOKEN }} ${{ github.actor}} $CONTAINER_NAME ${{ env.TAG }}
 
       - name: Build ${{ inputs.system }} wazuh-manager on ${{ inputs.architecture }}
         working-directory: packages
