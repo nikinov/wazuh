@@ -21,7 +21,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           skip_after_successful_duplicate: 'false'
 
-      - name: Checkout wazuh/wazuh repository
+      - name: Checkout GuardBear2/SIEM repository
         uses: actions/checkout@v4
 
       - name: Get changed files
