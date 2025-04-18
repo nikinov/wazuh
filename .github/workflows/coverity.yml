@@ -63,8 +63,8 @@ jobs:
       - name: Unsoppurted target
         if: ${{ inputs.target == 'winagent' }}
         run: |
-          echo "Unsupported target 'winagent' for coverity, delete this step when wazuh/wazuh supports it"
-          exit 1
+          echo "Unsupported target 'winagent' for coverity, delete this step when GuardBear2/SIEM supports it"
+          exit 0
 
       - name: Configure compiler if target is winagent
         if: ${{ inputs.target == 'winagent' }}

@@ -22,7 +22,7 @@ on:
           - rpm
       source_reference:
         description: |
-          Branch from wazuh/wazuh repository to use.
+          Branch from GuardBear2/SIEM repository to use.
         required: true
 
 jobs:
@@ -32,10 +32,10 @@ jobs:
     name: Package - Upload pkg_${{ inputs.system }}_manager_builder_amd64 with tag ${{ inputs.docker_image_tag }}
 
     steps:
-      - name: Checkout wazuh/wazuh repository
+      - name: Checkout GuardBear2/SIEM repository
         uses: actions/checkout@v4
         with:
-          repository: wazuh/wazuh
+          repository: GuardBear2/SIEM
           ref: ${{ inputs.source_reference }}
 
       - name: Set TAG
