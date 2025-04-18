@@ -22,7 +22,7 @@ on:
           - rpm
       source_reference:
         description: |
-          Branch from wazuh/wazuh repository to use.
+          Branch from nikinov/wazuh repository to use.
         required: true
 
 jobs:
@@ -32,10 +32,10 @@ jobs:
     name: Package - Upload pkg_${{ inputs.system }}_server_builder_amd64 with tag ${{ inputs.docker_image_tag }}
 
     steps:
-      - name: Checkout wazuh/wazuh repository
+      - name: Checkout nikinov/wazuh repository
         uses: actions/checkout@v4
         with:
-          repository: wazuh/wazuh
+          repository: nikinov/wazuh
           ref: ${{ inputs.source_reference }}
 
       - name: Set TAG
