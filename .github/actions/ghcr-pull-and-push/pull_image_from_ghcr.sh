@@ -15,6 +15,12 @@ IMAGE_ID=$(echo ${IMAGE_ID} | tr '[A-Z]' '[a-z]')
 # Login to GHCR
 echo ${GITHUB_PUSH_SECRET} | docker login https://ghcr.io -u $GITHUB_USER --password-stdin
 
-# Pull and rename image
-docker pull ${IMAGE_ID}
-docker image tag ghcr.io/${GITHUB_OWNER}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+# Try to pull image
+if docker pull ${IMAGE_ID}; then
+    echo "Successfully pulled ${IMAGE_ID}"
+    docker image tag ${IMAGE_ID} ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+else
+    echo "Image ${IMAGE_ID} not found. Continuing without error."
+    # Exit with success code to prevent workflow failure
+    exit 0
+fi
