@@ -1,7 +1,15 @@
-run-name: Build ${{ inputs.system }} wazuh-manager on ${{ inputs.architecture }} ${{ inputs.is_stage && '- is stage' || '' }} ${{ inputs.checksum && '- checksum' || '' }} ${{ inputs.debug && '- debug' || '' }} ${{ inputs.id }}
+run-name: Build wazuh-manager${{ github.event_name == 'push' && ' from push' || '' }}${{ github.event_name != 'push' && format(' {0} on {1}', inputs.system, inputs.architecture) || '' }}${{ github.event_name != 'push' && (inputs.is_stage && ' - is stage' || '') || '' }}${{ github.event_name != 'push' && (inputs.checksum && ' - checksum' || '') || '' }}${{ github.event_name != 'push' && (inputs.debug && ' - debug' || '') || '' }}${{ github.event_name != 'push' && inputs.id || '' }}
 name: Build Wazuh manager
 
 on:
+  push:
+    branches:
+      - main
+      - 'v*'
+      - buildbranch3
+    paths:
+      - 'src/**'
+      - 'packages/**'
   workflow_dispatch:
     inputs:
       docker_image_tag:
@@ -92,7 +100,7 @@ jobs:
   Build-manager-packages:
     runs-on: ubuntu-latest
     timeout-minutes: 35
-    name: Build ${{ inputs.system }} wazuh-manager on ${{ inputs.architecture }}
+    name: Build ${{ github.event_name == 'push' && 'wazuh-manager' || format('{0} wazuh-manager on {1}', inputs.system, inputs.architecture) }}
 
     steps:
       - name: Cancel previous runs
@@ -104,13 +112,36 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      - name: Set default values for push event
+        if: github.event_name == 'push'
+        run: |
+          echo "INPUT_SYSTEM=deb" >> $GITHUB_ENV
+          echo "INPUT_ARCHITECTURE=amd64" >> $GITHUB_ENV
+          echo "INPUT_DOCKER_IMAGE_TAG=auto" >> $GITHUB_ENV
+          echo "INPUT_REVISION=0" >> $GITHUB_ENV
+          echo "INPUT_IS_STAGE=false" >> $GITHUB_ENV
+          echo "INPUT_DEBUG=false" >> $GITHUB_ENV
+          echo "INPUT_CHECKSUM=false" >> $GITHUB_ENV
+
       - name: Set tag and container name
         run: |
           VERSION=$(sed 's/^v\([0-9]*\.[0-9]*\.[0-9]*\)/\1/' $GITHUB_WORKSPACE/src/VERSION)
-          if [ "${{ inputs.docker_image_tag }}" == "auto" ]; then echo "TAG=$VERSION" >> $GITHUB_ENV;
-          elif [ "${{ inputs.docker_image_tag }}" == "developer" ]; then echo "TAG=$(sed 's|[/\]|--|g' <<< ${{ github.ref_name }})" >> $GITHUB_ENV;
-          else echo "TAG=${{ inputs.docker_image_tag }}" >> $GITHUB_ENV; fi
-          echo "CONTAINER_NAME=pkg_${{ inputs.system }}_manager_builder_amd64" >> $GITHUB_ENV
+          DOCKER_TAG="${{ github.event_name == 'push' && env.INPUT_DOCKER_IMAGE_TAG || inputs.docker_image_tag }}"
+          SYSTEM="${{ github.event_name == 'push' && env.INPUT_SYSTEM || inputs.system }}"
+          
+          if [ "$DOCKER_TAG" == "auto" ]; then echo "TAG=$VERSION" >> $GITHUB_ENV;
+          elif [ "$DOCKER_TAG" == "developer" ]; then echo "TAG=$(sed 's|[/\]|--|g' <<< ${{ github.ref_name }})" >> $GITHUB_ENV;
+          else echo "TAG=$DOCKER_TAG" >> $GITHUB_ENV; fi
+          
+          echo "CONTAINER_NAME=pkg_${SYSTEM}_manager_builder_amd64" >> $GITHUB_ENV
+          
+          # Set these for later use in workflow
+          echo "SYSTEM=${SYSTEM}" >> $GITHUB_ENV
+          echo "ARCHITECTURE=${{ github.event_name == 'push' && env.INPUT_ARCHITECTURE || inputs.architecture }}" >> $GITHUB_ENV
+          echo "REVISION=${{ github.event_name == 'push' && env.INPUT_REVISION || inputs.revision }}" >> $GITHUB_ENV
+          echo "IS_STAGE=${{ github.event_name == 'push' && env.INPUT_IS_STAGE || inputs.is_stage }}" >> $GITHUB_ENV
+          echo "DEBUG=${{ github.event_name == 'push' && env.INPUT_DEBUG || inputs.debug }}" >> $GITHUB_ENV
+          echo "CHECKSUM=${{ github.event_name == 'push' && env.INPUT_CHECKSUM || inputs.checksum }}" >> $GITHUB_ENV
 
       - name: Download docker image for package building
         run: |
@@ -119,16 +150,16 @@ jobs:
       - name: Build ${{ inputs.system }} wazuh-manager on ${{ inputs.architecture }}
         working-directory: packages
         run: |
-          REVISION=${{ inputs.revision }}
+          REVISION=${{ env.REVISION }}
           FLAGS="-t manager -s /tmp --dont-build-docker -j $(nproc) "
           if [ -z "$REVISION" ]; then FLAGS+="-r 0 "; else FLAGS+="-r $REVISION "; fi
-          if [ "${{ inputs.is_stage }}" == "true" ]; then FLAGS+="--is_stage "; fi
-          if [ "${{ inputs.checksum }}" == "true" ]; then FLAGS+="--checksum "; fi
-          if [ "${{ inputs.debug}}" == "true" ]; then FLAGS+="--debug "; fi
+          if [ "${{ env.IS_STAGE }}" == "true" ]; then FLAGS+="--is_stage "; fi
+          if [ "${{ env.CHECKSUM }}" == "true" ]; then FLAGS+="--checksum "; fi
+          if [ "${{ env.DEBUG }}" == "true" ]; then FLAGS+="--debug "; fi
           # Every call to this workflow will be internally managed as amd64, which is synonymous with x86_64
-          echo "generate_package.sh -a amd64 --tag ${{ env.TAG }} --system ${{ inputs.system }} $FLAGS"
-          bash generate_package.sh -a amd64 --tag ${{ env.TAG }} --system ${{ inputs.system }} $FLAGS
-          echo "PACKAGE_NAME=$(find /tmp -maxdepth 1 -type f -name *manager*.${{ inputs.system }} -exec basename {} 2>/dev/null \;)" | tee -a $GITHUB_ENV
+          echo "generate_package.sh -a amd64 --tag ${{ env.TAG }} --system ${{ env.SYSTEM }} $FLAGS"
+          bash generate_package.sh -a amd64 --tag ${{ env.TAG }} --system ${{ env.SYSTEM }} $FLAGS
+          echo "PACKAGE_NAME=$(find /tmp -maxdepth 1 -type f -name *manager*.${{ env.SYSTEM }} -exec basename {} 2>/dev/null \;)" | tee -a $GITHUB_ENV
 
       - name: Test install built manager
         run: |
@@ -157,7 +188,7 @@ jobs:
           echo "S3 URI: ${s3uri}"
 
       - name: Upload checksum to S3
-        if: ${{ inputs.checksum }}
+        if: ${{ env.CHECKSUM }}
         run: |
           aws s3 cp /tmp/${{ env.PACKAGE_NAME }}.sha512 s3://packages-dev.internal.wazuh.com/development/wazuh/4.x/main/packages/
           s3uri="s3://packages-dev.internal.wazuh.com/development/wazuh/4.x/main/packages/${{ env.PACKAGE_NAME }}.sha512"
